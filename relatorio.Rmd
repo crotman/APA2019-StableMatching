@@ -1,0 +1,407 @@
+---
+title: "Emparelhamento estável"
+author: "Bruno Crotman"
+date: "25/06/2019"
+header-includes:
+- \usepackage[portuguese]{babel}
+output: 
+    pdf_document:
+        number_sections: true
+        fig_caption: yes
+
+bibliography: D:/temp/apa.bib            
+        
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+library(tidyverse)
+library(texreg)
+library(xtable)
+
+options(OutDec = ",")
+
+```
+
+
+
+\section{Problema do emparelhamento estável}
+
+O problema do emparelhamento estável foi estudado em detalhes pela primeira vez em 1962 por Gale e Shapley [@gale1962college]. O objetivo era gerar um emparelhamento que alocasse alunos a escolas de forma que nenhum aluno $a$ tenha alguma escola $e'$ que ele prefira em comparação à escola $e$ em que ele ficou alocado e ao mesmo tempo essa escola $e'$ prefira $a$ em relação ao aluno $a'$ que ficou alocado originalmente em $e'$. 
+
+Se esta situção ocorrer, o emparelhamento original não é estável, pois basta $e'$ propor a $a$ que a alocação original se desfaz, pois ambos $e'$ e $a$ preferem esta nova alocação.
+
+Este mesmo problema se aplica a inúmeras situações em que há dois grupos de candidatos a uma relação que envolva um membro de cada grupo. Alguns dos exemplos são candidatos a emprego e empresas, pessoas em busca de relacionamento amoroso, calouros de cursos de pós graduação e orientadores, jogadores e clubes, clientes e fornecedores etc. Esta instabilidade na alocação não é desejada pois causa ineficência: custos de dissolução da relação e custos empregados em treinamento ou qualquer outro tipo de aprofundamento da relação.
+
+Várias aplicações a mercados de combinação deste tipo foram criadas a partir dos algoritmos de Gale e Shapley, como conta Alvin Roth em um de seus livros [@roth2016funcionam]. Roth e Shapley dividiram o Nobel de Economia de 2012. Shapley em virtude da descoberta do algoritmo emparelhamento estável, Roth pela aplicação prática de variações deste algoritmo a problemas de emparelhamento diversos como emperelhamento de médicos a hospitais, estudantes com escolas e doadores de órgãos a receptadores.
+
+\section{Algoritmo Gale-Shapley}
+
+
+O algoritmo implementado foi baseado no livro-texto da matéria [@tardos2006algorithm]. Basicamente o algoritmo segue os seguintes passos, usando um vocabulário de casamentos entre heterossexuais:
+
+- Enquanto há um homem solteiro $h$
+    - $h$ propõe à próxima mulher de sua preferência à qual ainda não propôs, $m$
+    - Se $m$ está solteira
+        - $h$ casa com $m$
+    - Se não
+        - Se ela prefere $h$ ao seu parceiro atual $h'$
+            - $m$ dispensa $h$, que fica solteiro, e $m$ casa com $h'$
+            
+            
+            
+
+Para que cada um dos passos seja em tempo constante, é criada uma estrutura de lista para abrigar os homens solteiros e uma matriz para armazenar a posição dos homens no ranking de preferência de cada mulher. A lista possibilita que as operações de inserção e retirada de um solteiro ocorram em $O(1)$. A matriz com o ranking dos homens possibilita que a comparação do parceiro atual da mulher com o homem solteiro candidato ocorra em $O(1)$ também. Com isso, a complexidade do algoritmo é $O(n^2)$.
+
+
+
+\section{Avaliação da execução do algoritmo}
+
+A execução do algoritmo foi avaliada com três tipos de instâncias para 22 diferentes valores de n (número de elementos em cada grupo).
+
+$$n = \{ 5, 50, 100, 200, ..., 1000, 1500, ..., 3000, 4000, ..., 9000 \}$$
+
+Os 3 tipos de instância são os seguintes: 
+
+- As que levam ao melhor caso de execução, ou seja, que exigem o menor número possível de passos, para um valor de $n$;
+
+- As que levam ao pior caso de execução, ou seja, que exigem o maior número possível de passos, para um valor de $n$;
+
+- Instâncias geradas aleatoriamente.
+
+
+O programa usado para realizar a avaliação empírica do algoritmo foi desenvolvido na linguagem C++, usando apenas as bibliotecas stdio.h e stdlib.h, para leitura e escrita em arquivos e no console, e chrono, para executar a medição dos tempos de execução. Para medição dos tempos de execução foi usado um computador com processador Intel i7-7700 com 3,6 GHz, sistema operacional Windows 10 64 bits. O programa foi compilado no Visual Studio 2017 sem configurações extras de otimização de velocidade.
+
+As instâncias adicionais foram geradas com a linguagem R, que também foi usada para geração deste relatório, juntamente com as bibliotecas tidyverse e RMarkdown.
+
+
+
+
+\subsection{Melhor caso}
+
+
+Na avaliação do melhor caso, foram usadas instâncias específicas, uma para cada valor de $n$. O algoritmo foi rodado 30 vezes para cada uma das instâncias.
+
+A Figura \ref{fig:melhor_passos} mostra o número de passos do loop princpal do algoritmo (após a preparação das estruturas). É possível ver que o número de passos neste melhor caso é exatamente igual ao número de elementos.
+
+
+A Figura \ref{fig:melhor_tempo} mostra o tempo em segundos pra cada número de elementos, nas 30 execuções. É possível perceber que o tempo aumenta de forma não linear. A Tabela \ref{reg:tempomelhor} mostra os coeficientes de uma regressão no formato $tempo = \alpha + n^\beta$, que foi estimada para $n > 1000$. É possível ver que o coeficiente $\beta$ se aproxima de 2. O tempo da ordem de $O(n^2)$ é justificado porque antes do loop há a inicialização da estrutura do ranking dos homens, que é feito em $O(n^2)$ passos. Como o número de passos mais pesado do loop principal é pequeno, estes passos de inicialização acabam dominando a execução. A Tabela \ref{tab:melhorcaso} mostra os dados deste melhor caso.
+
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+resultado0 <- read_csv("C:\\resultadoapa\\rodada_best_worse_1_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 0, id <= 395) 
+
+
+resultado1 <- read_csv("C:\\resultadoapa\\rodada_best_worse_10_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 0, id <= 395) 
+
+resultado2 <- read_csv("C:\\resultadoapa\\rodada_best_worse_19_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 0, id <= 395) 
+
+
+resultado3 <- read_csv("C:\\resultadoapa\\rodada_best_worse_27_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 0, id <= 395) 
+
+
+resultado <- bind_rows(resultado0, resultado1, resultado2, resultado3) %>% 
+    mutate(id = cumsum(um)-1) %>% 
+    mutate(rodada = id %/% 22 )
+```
+
+
+```{r figs2, fig.cap="\\label{fig:melhor_passos}Número de passos x número de elementos em cada grupo", paged.print=FALSE }
+ggplot(resultado) +
+    geom_line(aes(x = n, y = passos, group = rodada )) +
+    geom_point(aes(x = n, y = passos, group = rodada )) +
+    scale_x_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), expand = expand_scale(0), limits = c(0,10000)) +
+    scale_y_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), limits = c(0,10000), expand = expand_scale(0))
+```
+
+
+```{r figs, fig.cap="\\label{fig:melhor_tempo}Tempo de execução (segundos) x número de elementos em cada grupo", message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(resultado) +
+    geom_line(aes(x = n, y = tempo, group = rodada )) +
+    geom_point(aes(x = n, y = tempo, group = rodada )) +
+    geom_smooth(aes(x = n, y = tempo)) +     
+    scale_x_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), expand = expand_scale(0), limits = c(0,10000)) +
+    labs(y = "tempo(s)")
+
+
+
+
+
+
+
+```
+
+\newpage
+
+```{r results='asis'}
+
+
+
+modelo <-  lm(log(tempo) ~ log(n), data = resultado %>% filter (n> 1000) )
+
+texreg(modelo, custom.model.names = c("Regressão"), caption = "Regressão log-log: $tempo = \\alpha + n^\\beta$ ", custom.coef.names = c("$\\alpha$","$\\beta$"), label = "reg:tempomelhor")
+
+```
+
+
+
+
+
+```{r results='asis'}
+
+tabela <- resultado %>% 
+    group_by(n) %>% 
+    summarise("Tempo médio (ms)" = mean(tempo*1000), "Passos médios" = as.integer(mean(passos)), "Tempo mediano (ms)" = median(tempo*1000), "Passos medianos" = as.integer(median(passos)))
+
+options(xtable.comment = FALSE)
+xtable(tabela, caption = "Dados das 30 execuções do melhor caso", label = "tab:melhorcaso" )
+
+
+```
+
+
+
+
+\subsection{Pior caso}
+
+
+Na avaliação do pior caso, foram usadas instâncias específicas, uma para cada valor de $n$. O algoritmo foi rodado 30 vezes para cada uma das instâncias.
+
+A Figura \ref{fig:pior_passos} mostra o número de passos do loop princpal do algoritmo (após a preparação das estruturas). É possível ver que o número de passos neste pior caso evolui de forma não linear. A Tabela \ref{reg:tempomelhor} mostra os coeficientes de uma regressão no formato $tempo = \alpha + n^\beta$, que foi estimada para $n > 1000$. É possível ver que o coeficiente $\beta$ é exatamente 2, sugerindo complexidade $O(n^2)$.
+
+
+A Figura \ref{fig:pior_tempo} mostra o tempo em segundos pra cada número de elementos, nas 30 execuções. É possível perceber que o tempo aumenta de forma não linear. A Tabela \ref{reg:tempopior} mostra os coeficientes de uma regressão no formato $tempo = \alpha + n^\beta$, que foi estimada para $n > 1000$. É possível ver que o coeficiente $\beta$ é igual de 2, sugerindo complexidade $O(n^2)$. O coeficiente $\alpha$, porém, é menos negativo, o que quer dizer que o tempo de execução é maior neste caso. Realmente podemos observar que o tempo de execução é bem maior comparando as Tabelas \ref{tab:piorcaso} e  \ref{tab:melhorcaso}.
+
+
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+resultadop0 <- read_csv("C:\\resultadoapa\\rodada_best_worse_1_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 1, id <= 395) 
+
+
+resultadop1 <- read_csv("C:\\resultadoapa\\rodada_best_worse_10_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 1, id <= 395) 
+
+resultadop2 <- read_csv("C:\\resultadoapa\\rodada_best_worse_19_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 1, id <= 395) 
+
+
+resultadop3 <- read_csv("C:\\resultadoapa\\rodada_best_worse_27_a_30.csv", col_names = c("n", "tempo", "passos")) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)) %>% 
+    filter(id %% 2 == 1, id <= 395) 
+
+
+resultadop <- bind_rows(resultadop0, resultadop1, resultadop2, resultadop3) %>% 
+    mutate(id = cumsum(um)-1) %>% 
+    mutate(rodada = id %/% 22 )
+```
+
+
+```{r figs3, fig.cap="\\label{fig:pior_passos}Número de passos x número de elementos em cada grupo", paged.print=FALSE }
+ggplot(resultadop) +
+    geom_line(aes(x = n, y = passos, group = rodada )) +
+    geom_point(aes(x = n, y = passos, group = rodada )) +
+    geom_smooth(formula = y ~ poly(x, 2, raw = TRUE), method= "lm", aes(x = n, y = passos)) +     
+    scale_x_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), expand = expand_scale(0), limits = c(0,10000)) 
+```
+
+
+```{r figs10, fig.cap="\\label{fig:pior_tempo}Tempo de execução (segundos) x número de elementos em cada grupo", message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(resultadop) +
+    geom_line(aes(x = n, y = tempo, group = rodada )) +
+    geom_point(aes(x = n, y = tempo, group = rodada )) +
+    geom_smooth(formula = y ~ poly(x, 2, raw = TRUE), method= "lm", aes(x = n, y = tempo)) +     
+    scale_x_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), expand = expand_scale(0), limits = c(0,10000)) +
+    labs(y = "tempo(s)")
+
+
+
+
+
+
+
+```
+
+\newpage
+
+
+```{r results='asis'}
+
+
+
+modelopp <-  lm(log(passos) ~ log(n) , data = resultadop %>%  filter(n > 1000)  )
+
+texreg(modelopp, custom.model.names = c("Regressão"), caption = "Regressão log-log: $passos = \\alpha + n^\\beta$ ", custom.coef.names = c("$\\alpha$","$\\beta$"), label = "reg:passospior")
+
+```
+
+
+
+```{r results='asis'}
+
+
+
+modelopt <-  lm(log(tempo) ~ log(n) , data = resultadop %>%  filter(n > 1000)  )
+
+texreg(modelopt, custom.model.names = c("Regressão"), caption = "Regressão log-log: $tempo = \\alpha + n^\\beta$ ", custom.coef.names = c("$\\alpha$","$\\beta$"), label = "reg:tempopior")
+
+```
+
+
+
+
+```{r results='asis'}
+
+tabela <- resultadop %>% 
+    group_by(n) %>% 
+    summarise("Tempo médio (ms)" = mean(tempo*1000), "Passos médios" = as.integer(mean(passos)), "Tempo mediano (ms)" = median(tempo*1000), "Passos medianos" = as.integer(median(passos)))
+
+options(xtable.comment = FALSE)
+
+xtable(tabela, caption = "Dados das 30 execuções do pior caso", label = "tab:piorcaso",
+       
+       display = c("d","d","f","e","f","e") 
+       )
+
+
+```
+
+
+\subsection{Caso médio}
+
+
+Na avaliação do caso médio, foram usadas 30 instâncias geradas aleatoriamente para cada valor de $n$. O algoritmo foi rodado uma vez para cada uma das instâncias, gerando 30 execuções para cada valor de n. Neste caso, portanto, diferentemente dos anteriores, temos uma variação no número de passos, que passa a não ser mais determinístico.
+
+A Figura \ref{fig:ale_passos} mostra o número de passos do loop principal do algoritmo (após a preparação das estruturas). É possível ver que o número de passos neste pior caso evolui de forma quase linear. A Tabela \ref{reg:passosale} mostra os coeficientes de uma regressão no formato $tempo = \alpha + n^\beta$, que foi estimada para $n > 1000$. É possível ver que o coeficiente $\beta$ está perto 1,1, sugerindo complexidade do loop principal está perto de $O(n)$ para o caso médio.
+
+
+A Figura \ref{fig:ale_tempo} mostra o tempo em segundos pra cada número de elementos, nas 30 execuções. A Tabela \ref{reg:passosale} relativa à regressão do tempo mostra um coeficiente $\beta$ perto de 2 É possível perceber que o tempo aumenta de forma não linear. É possível reparar, também, olhando as Tabelas \ref{tab:melhorcaso}, \ref{tab:piorcaso} e \ref{tab:ale}, que o tempo de execução do caso médio está mais perto do tempo do melhor caso do que o do pior caso.
+
+
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
+resultadoale1 <- read_csv("C:\\resultadoapa\\rodada_ale_1_a_7.csv", col_names = c("n", "tempo", "passos"))
+
+resultadoale2 <- read_csv("C:\\resultadoapa\\rodada_ale_8_a_15.csv", col_names = c("n", "tempo", "passos"))
+
+resultadoale3 <- read_csv("C:\\resultadoapa\\rodada_ale_16_a_22.csv", col_names = c("n", "tempo", "passos"))
+
+resultadoale4 <- read_csv("C:\\resultadoapa\\rodada_ale_23_a_30.csv", col_names = c("n", "tempo", "passos"))
+
+resultadoale <- bind_rows(resultadoale1, resultadoale2, resultadoale3, resultadoale4) %>% 
+    mutate(um = 1) %>% 
+    mutate(id = cumsum(um)-1) %>% 
+    mutate(rodada = id %/% 22 )
+
+```
+
+
+```{r figs9, fig.cap="\\label{fig:ale_passos}Número de passos x número de elementos em cada grupo", message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(resultadoale) +
+    geom_line(aes(x = n, y = passos, group = rodada )) +
+    geom_point(aes(x = n, y = passos, group = rodada )) +
+    geom_smooth( aes(x = n, y = passos)) +     
+    scale_x_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), expand = expand_scale(0), limits = c(0,10000)) 
+```
+
+
+```{r figs4, fig.cap="\\label{fig:ale_tempo}Tempo de execução (segundos) x número de elementos em cada grupo", message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(resultadoale) +
+    geom_line(aes(x = n, y = tempo, group = rodada )) +
+    geom_point(aes(x = n, y = tempo, group = rodada )) +
+    geom_smooth(formula = y ~ poly(x, 2, raw = TRUE), method= "lm", aes(x = n, y = tempo)) +     
+    scale_x_continuous(breaks= c(0,1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000), expand = expand_scale(0), limits = c(0,10000)) +
+    labs(y = "tempo(s)")
+
+
+
+
+
+
+
+```
+
+\newpage
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, results='asis'}
+
+
+
+modeloalep <-  lm(log(passos) ~ log(n) , data = resultadoale %>%  filter(n > 1000)  )
+
+texreg(modeloalep, custom.model.names = c("Regressão"), caption = "Regressão log-log: $passos = \\alpha + n^\\beta$ ", custom.coef.names = c("$\\alpha$","$\\beta$"), label = "reg:passosale")
+
+```
+
+
+
+```{r results='asis'}
+
+
+
+modeloalet <-  lm(log(tempo) ~ log(n) , data = resultadoale %>%  filter(n > 1000)  )
+
+texreg(modeloalet, custom.model.names = c("Regressão"), caption = "Regressão log-log: $tempo = \\alpha + n^\\beta$ ", custom.coef.names = c("$\\alpha$","$\\beta$"), label = "reg:tempoale")
+
+```
+
+
+
+
+```{r results='asis'}
+
+tabela <- resultadoale %>% 
+    group_by(n) %>% 
+    summarise("Tempo médio (ms)" = mean(tempo*1000), "Passos médios" = as.integer(mean(passos)), "Tempo mediano (ms)" = median(tempo*1000), "Passos medianos" = as.integer(median(passos)))
+
+options(xtable.comment = FALSE)
+
+xtable(tabela, caption = "Dados das 30 execuções do pior caso", label = "tab:ale",
+       
+       display = c("d","d","f","e","f","e") 
+       )
+
+
+```
+
+
+\section{Conclusões}
+
+
+Pudemos atestar que, conforme o esperado, a complexidade do algoritmo se mostra $O(n^2)$ na análise empírica. O tempo de execução segue $O(n^2)$ mesmo no melhor caso e no pior caso, apesar de a execução ser em tempos muito menores do que nas instâncias de pior caso. Isso acontece porque existe uma inicialização antes do loop principal que tem complexidade $O(n^2)$ mesmo no melhor caso e no caso médio. Esta inicialização acaba prevalecendo na análise do tempo asintótica em relação a $n$.
+
+A descoberta maisi interessante foi o ffato de que a execução do caso médio está muito mais perto do melhor caso do que do pior caso tanto em número de passos quanto em tempo de execução.
+
+
+
+
+
